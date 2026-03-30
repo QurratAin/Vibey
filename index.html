@@ -1,0 +1,1698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Vibey - Ambient sound mixer for focus, sleep, and everything in between">
+    <meta name="theme-color" content="#1c1c1e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Vibey">
+    <title>Vibey</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='white'/><circle cx='50' cy='50' r='35' fill='%23b91c1c'/></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #080000;
+            --surface-glass: rgba(30, 10, 10, 0.4);
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b8;
+            --text-muted: #8a6e6e;
+            --accent: #b91c1c;
+            --accent-hover: #991b1b;
+            --border-light: rgba(255, 80, 80, 0.1);
+            --shadow-sm: 0 8px 24px rgba(0, 0, 0, 0.6);
+            --shadow-md: 0 20px 40px rgba(0, 0, 0, 0.7);
+            --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --glass-border: 1px solid rgba(255, 80, 80, 0.08);
+        }
+
+        body {
+            background: linear-gradient(135deg, #080000 0%, #1a0808 50%, #0c0202 100%);
+            position: relative;
+            overflow: hidden;
+            color: var(--text-primary);
+            font-family: var(--font);
+            font-size: 14px;
+            line-height: 1.4;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            font-weight: 400;
+            letter-spacing: -0.01em;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -20%;
+            left: -20%;
+            width: 140%;
+            height: 140%;
+            background: 
+                radial-gradient(circle at 30% 40%, rgba(220, 40, 40, 0.2) 0%, transparent 35%),
+                radial-gradient(circle at 90% 60%, rgba(180, 20, 20, 0.18) 0%, transparent 40%),
+                radial-gradient(circle at 20% 80%, rgba(240, 80, 60, 0.15) 0%, transparent 45%),
+                radial-gradient(circle at 70% 10%, rgba(150, 10, 10, 0.2) 0%, transparent 35%),
+                radial-gradient(circle at 50% 50%, rgba(200, 30, 30, 0.1) 0%, transparent 50%);
+            filter: blur(50px);
+            animation: emberDrift 25s ease infinite alternate;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(90deg, rgba(255, 50, 50, 0.01) 0px, rgba(255, 50, 50, 0.01) 2px, transparent 2px, transparent 12px),
+                          repeating-linear-gradient(0deg, rgba(200, 30, 30, 0.01) 0px, rgba(200, 30, 30, 0.01) 2px, transparent 2px, transparent 12px);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        @keyframes emberDrift {
+            0% { transform: scale(1) rotate(0deg); opacity: 0.6; }
+            50% { transform: scale(1.1) rotate(2deg); opacity: 0.8; }
+            100% { transform: scale(1.2) rotate(-2deg); opacity: 0.6; }
+        }
+
+        header, .tab-nav, .tab-container, .bottom-bar, footer {
+            position: relative;
+            z-index: 2;
+        }
+
+        header {
+            padding: 20px 20px 12px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+            min-height: 60px;
+            text-align: center;
+        }
+
+        .header-left {
+            text-align: center;
+            width: 100%;
+        }
+
+        .header-left h1 {
+            font-size: 28px;
+            font-weight: 650;
+            letter-spacing: -0.02em;
+            color: #ffffff;
+            line-height: 1.2;
+            padding-bottom: 2px;
+            text-shadow: 0 2px 10px rgba(185, 28, 28, 0.3);
+        }
+
+        .header-left p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 400;
+            margin-top: 2px;
+        }
+
+        .tab-nav {
+            display: flex;
+            gap: 4px;
+            padding: 6px 20px 12px 20px;
+            flex-shrink: 0;
+            justify-content: center;
+        }
+
+        .tab {
+            padding: 6px 20px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 40px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .tab.active {
+            background: var(--surface-glass);
+            backdrop-filter: blur(10px);
+            color: var(--text-primary);
+            border: var(--glass-border);
+        }
+
+        .tab-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 0 20px;
+            min-height: 0;
+        }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow: visible;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #downloadsTab.tab-content.active {
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 4px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0.5; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .mixes-section, .sounds-section {
+            margin-bottom: 16px;
+            background: var(--surface-glass);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: var(--glass-border);
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .mixes-header, .sounds-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .mixes-header h3, .sounds-header h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .mixes-header span, .sounds-header span {
+            color: var(--text-secondary);
+            font-size: 12px;
+            transition: transform 0.2s ease;
+        }
+
+        .mixes-header.collapsed span, .sounds-header.collapsed span {
+            transform: rotate(-90deg);
+        }
+
+        .mixes-content, .sounds-content {
+            padding: 0 16px 16px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mixes-content.collapsed, .sounds-content.collapsed {
+            display: none;
+        }
+
+        .mix-card, .sound-card, .download-card {
+            background: rgba(20, 8, 8, 0.6);
+            backdrop-filter: blur(10px);
+            border-radius: 40px;
+            padding: 6px 10px;
+            border: 1px solid rgba(255, 80, 80, 0.1);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            width: fit-content;
+            max-width: 100%;
+        }
+
+        .mix-card {
+            padding: 6px 10px 6px 14px;
+        }
+
+        .mix-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(30, 10, 10, 0.6);
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 80, 80, 0.1);
+            color: var(--accent);
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+
+        .mix-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .mix-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+
+        .mix-timer-badge {
+            color: var(--text-secondary);
+            font-size: 10px;
+            background: rgba(30, 10, 10, 0.6);
+            padding: 2px 6px;
+            border-radius: 20px;
+            white-space: nowrap;
+            border: 1px solid rgba(255, 80, 80, 0.1);
+        }
+
+        .mix-actions, .sound-actions, .download-actions {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .mix-btn, .play-button, .remove-sound-btn, .btn {
+            width: 32px;
+            height: 32px;
+            background: rgba(30, 10, 10, 0.6);
+            border: 1px solid rgba(255, 80, 80, 0.15);
+            border-radius: 30px;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+
+        .mix-btn {
+            width: 32px;
+            height: 32px;
+            font-size: 13px;
+        }
+
+        .mix-btn.play:hover, .play-button:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .sound-card.playing .play-button {
+            background: var(--accent);
+            color: white;
+        }
+
+        .remove-sound-btn {
+            color: #ff8a8a;
+            font-size: 14px;
+        }
+
+        .remove-sound-btn:hover, .mix-btn.delete:hover {
+            background: #ff453a;
+            color: white;
+        }
+
+        .sound-left {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .sound-icon, .download-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(30, 10, 10, 0.6);
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 80, 80, 0.1);
+        }
+
+        .sound-icon svg, .download-icon svg {
+            width: 18px;
+            height: 18px;
+            stroke: var(--accent);
+        }
+
+        .sound-name, .download-name {
+            font-weight: 500;
+            font-size: 13px;
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .volume-slider {
+            width: 70px;
+            height: 3px;
+            appearance: none;
+            background: rgba(255, 80, 80, 0.2);
+            border-radius: 10px;
+            outline: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            border: 2px solid var(--accent);
+            cursor: pointer;
+        }
+
+        .volume-label {
+            color: var(--text-primary);
+            font-size: 11px;
+            font-weight: 500;
+            min-width: 32px;
+        }
+
+        .downloads-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        .refresh-btn {
+            background: rgba(30, 10, 10, 0.6);
+            backdrop-filter: blur(10px);
+            border: var(--glass-border);
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            color: var(--text-primary);
+            height: 34px;
+        }
+
+        .refresh-btn svg {
+            width: 12px;
+            height: 12px;
+            fill: var(--text-primary);
+        }
+
+        .btn {
+            width: auto;
+            padding: 5px 12px;
+            font-size: 11px;
+            font-weight: 500;
+            white-space: nowrap;
+            height: 32px;
+        }
+
+        .btn-secondary {
+            background: transparent;
+        }
+
+        .btn-secondary.active {
+            background: var(--accent);
+            color: white;
+            border-color: transparent;
+        }
+
+        .download-info {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .download-status {
+            color: var(--text-secondary);
+            font-size: 10px;
+        }
+
+        .bottom-bar {
+            padding: 8px 20px 12px 20px;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .timer-container {
+            background: rgba(20, 8, 8, 0.6);
+            backdrop-filter: blur(30px);
+            border-radius: 50px;
+            padding: 6px 16px;
+            border: 1px solid rgba(255, 80, 80, 0.15);
+            box-shadow: var(--shadow-sm);
+            display: inline-flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 120px;
+            height: 40px;
+            background: rgba(15, 5, 5, 0.5);
+            border-radius: 50px;
+            cursor: pointer;
+            border: 1px solid rgba(255, 80, 80, 0.2);
+            overflow: hidden;
+        }
+
+        .toggle-track {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+        }
+
+        .toggle-off-text, .toggle-on-text {
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 2;
+            transition: color 0.2s ease;
+        }
+
+        .toggle-off-text {
+            color: var(--text-secondary);
+        }
+
+        .toggle-on-text {
+            color: var(--text-secondary);
+        }
+
+        .toggle-thumb {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 58px;
+            height: 36px;
+            background: var(--accent);
+            border-radius: 50px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1;
+        }
+
+        .toggle-switch.active .toggle-thumb {
+            transform: translateX(58px);
+        }
+
+        .toggle-switch.active .toggle-off-text {
+            color: var(--text-muted);
+        }
+
+        .toggle-switch.active .toggle-on-text {
+            color: white;
+        }
+
+        .toggle-switch:not(.active) .toggle-off-text {
+            color: white;
+        }
+
+        .toggle-switch:not(.active) .toggle-on-text {
+            color: var(--text-muted);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(15, 5, 5, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 80, 80, 0.15);
+            border-radius: 40px;
+            padding: 6px 16px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            height: 36px;
+            min-width: 70px;
+            justify-content: center;
+        }
+
+        .action-btn.save {
+            background: var(--accent);
+            border-color: transparent;
+        }
+
+        .action-btn.save span {
+            color: white;
+        }
+
+        .action-btn span {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .action-btn.stop span {
+            color: #ff8a8a;
+        }
+
+        .action-btn.stop:hover {
+            background: rgba(255, 69, 58, 0.2);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(15px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .time-picker-modal {
+            background: rgba(30, 20, 20, 0.95);
+            backdrop-filter: blur(30px);
+            border-radius: 40px;
+            padding: 24px 28px;
+            border: 1px solid rgba(255, 80, 80, 0.2);
+            box-shadow: var(--shadow-md);
+            text-align: center;
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+            min-width: 280px;
+        }
+
+        .modal-overlay.active .time-picker-modal {
+            transform: scale(1);
+        }
+
+        .time-picker-modal h3 {
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .time-picker-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .time-picker-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .time-picker-value {
+            font-size: 44px;
+            font-weight: 600;
+            color: var(--text-primary);
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 30px;
+            padding: 8px 20px;
+            min-width: 90px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .time-picker-value:hover {
+            background: rgba(185, 28, 28, 0.3);
+        }
+
+        .time-picker-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .time-picker-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            padding: 8px 24px;
+            border-radius: 40px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            height: 38px;
+            min-width: 85px;
+        }
+
+        .modal-btn.confirm {
+            background: var(--accent);
+            color: white;
+            border: none;
+        }
+
+        .modal-btn.cancel {
+            background: rgba(30, 10, 10, 0.6);
+            border: 1px solid rgba(255, 80, 80, 0.2);
+            color: var(--text-secondary);
+        }
+
+        .number-selector {
+            position: relative;
+            display: inline-block;
+        }
+
+        .number-options {
+            position: absolute;
+            bottom: 65px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 8, 8, 0.95);
+            backdrop-filter: blur(30px);
+            border-radius: 30px;
+            padding: 6px 0;
+            border: 1px solid rgba(255, 80, 80, 0.2);
+            display: none;
+            z-index: 1100;
+            max-height: 180px;
+            overflow-y: auto;
+            min-width: 80px;
+        }
+
+        .number-options.show {
+            display: block;
+        }
+
+        .number-option {
+            padding: 8px 20px;
+            font-size: 14px;
+            color: var(--text-primary);
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .number-option:hover {
+            background: rgba(185, 28, 28, 0.3);
+        }
+
+        footer {
+            padding: 8px 20px 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            color: #8a6e6e;
+            font-size: 11px;
+            flex-shrink: 0;
+            background: transparent;
+            border-top: 1px solid rgba(255, 80, 80, 0.05);
+        }
+
+        footer a, .donate-link {
+            color: #ff8a8a;
+            text-decoration: none;
+            transition: color 0.2s ease;
+            cursor: pointer;
+        }
+
+        footer a:hover, .donate-link:hover {
+            color: var(--accent);
+        }
+
+        .install-link {
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .install-link svg {
+            width: 12px;
+            height: 12px;
+            fill: currentColor;
+        }
+
+        .footer-separator {
+            color: #5e5e64;
+            font-size: 10px;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 16px;
+            font-size: 12px;
+            background: var(--surface-glass);
+            backdrop-filter: blur(20px);
+            border-radius: 40px;
+            border: var(--glass-border);
+            width: fit-content;
+            margin: 0 auto;
+        }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .refresh-btn.loading svg {
+            animation: spin 1s infinite linear;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 550px) {
+            .timer-container {
+                gap: 10px;
+                padding: 5px 12px;
+            }
+            
+            .toggle-switch {
+                width: 100px;
+                height: 34px;
+            }
+            
+            .toggle-thumb {
+                width: 48px;
+                height: 30px;
+            }
+            
+            .toggle-switch.active .toggle-thumb {
+                transform: translateX(48px);
+            }
+            
+            .action-btn {
+                padding: 4px 12px;
+                min-width: 60px;
+                height: 32px;
+            }
+            
+            .action-btn span {
+                font-size: 11px;
+            }
+            
+            footer {
+                gap: 10px;
+                padding: 6px 16px 10px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-left">
+            <h1>Vibey</h1>
+            <p>Soundscapes for every moment</p>
+        </div>
+    </header>
+
+    <nav class="tab-nav">
+        <button class="tab active" data-tab="sounds">Sounds</button>
+        <button class="tab" data-tab="downloads">Downloads</button>
+    </nav>
+
+    <div class="tab-container">
+        <div id="soundsTab" class="tab-content active">
+            <div class="mixes-section" id="mixesSection">
+                <div class="mixes-header" id="mixesHeader">
+                    <h3>Saved Mixes</h3>
+                    <span>▼</span>
+                </div>
+                <div class="mixes-content" id="mixesContent">
+                    <div id="mixesList" style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%;"></div>
+                </div>
+            </div>
+
+            <div class="sounds-section" id="soundsSection">
+                <div class="sounds-header" id="soundsHeader">
+                    <h3>Your sounds <span id="soundCount" style="margin-left: 8px; color: var(--text-secondary); font-size: 12px;">0</span></h3>
+                    <span>▼</span>
+                </div>
+                <div class="sounds-content" id="soundsContent">
+                    <div id="soundsList" style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="downloadsTab" class="tab-content">
+            <div class="downloads-header">
+                <h3>Available Sounds</h3>
+                <button class="refresh-btn" id="refreshSoundsBtn">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M17.65 6.35A8 8 0 1 0 19 12h-2a6 6 0 1 1-2.23-4.69l2.64-2.64 1.42 1.42-3.54 3.54-3.54-3.54 1.41-1.41 2.49 2.49z"/>
+                    </svg>
+                    Refresh
+                </button>
+            </div>
+            <div id="downloadsList"></div>
+        </div>
+    </div>
+
+    <div class="bottom-bar">
+        <div class="timer-container">
+            <div class="toggle-switch" id="toggleSwitch">
+                <div class="toggle-track">
+                    <span class="toggle-off-text">Timer</span>
+                    <span class="toggle-on-text" id="toggleTimerText">00:00</span>
+                </div>
+                <div class="toggle-thumb"></div>
+            </div>
+            
+            <div class="action-buttons">
+                <div class="action-btn save" id="saveBtn">
+                    <span>Save Mix</span>
+                </div>
+                <div class="action-btn stop" id="stopBtn">
+                    <span>Stop Sounds</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="timePickerModal">
+        <div class="time-picker-modal">
+            <h3>Set Timer</h3>
+            <div class="time-picker-controls">
+                <div class="time-picker-column">
+                    <div class="number-selector">
+                        <div class="time-picker-value" id="modalHours">0</div>
+                        <div class="number-options" id="hoursNumberOptions"></div>
+                    </div>
+                    <span class="time-picker-label">HOURS</span>
+                </div>
+                <div class="time-picker-column">
+                    <div class="number-selector">
+                        <div class="time-picker-value" id="modalMinutes">0</div>
+                        <div class="number-options" id="minutesNumberOptions"></div>
+                    </div>
+                    <span class="time-picker-label">MINUTES</span>
+                </div>
+            </div>
+            <div class="time-picker-actions">
+                <button class="modal-btn confirm" id="confirmTimer">Set Timer</button>
+                <button class="modal-btn cancel" id="cancelTimer">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <span>This app is free, but my therapy isn't. <a href="https://paypal.me/qurratulain006" target="_blank" rel="noopener noreferrer" class="donate-link">Help!</a></span>
+        <span class="footer-separator">|</span>
+        <span class="install-link" id="installFooterBtn">
+            <svg viewBox="0 0 24 24" width="12" height="12">
+                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+            </svg>
+            Install App
+        </span>
+    </footer>
+
+    <script>
+       
+        const GITHUB_CONFIG = {
+            owner: 'QurratAin',
+            repo: 'Vibey',
+            path: 'sounds'
+        };
+
+        let SOUNDS = [];
+        const state = {
+            volumes: {},
+            playing: {},
+            loading: {},
+            activeSounds: []
+        };
+
+        let deferredPrompt = null;
+        let timerActive = false;
+        let timerMinutes = 0;
+        let timerRemainingSeconds = 0;
+        let timerInterval = null;
+        let originalVolumes = {};
+
+        const ICONS = {
+            default: '<circle cx="30" cy="30" r="22" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="30" cy="30" r="14" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"/><circle cx="30" cy="30" r="6" fill="currentColor"/>',
+        };
+
+        class AudioManager {
+            constructor() {
+                this.audioContext = null;
+                this.sounds = new Map();
+                this.gainNodes = new Map();
+                this.masterGain = null;
+            }
+
+            init() {
+                if (this.audioContext) return;
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                this.masterGain = this.audioContext.createGain();
+                this.masterGain.connect(this.audioContext.destination);
+                this.masterGain.gain.value = 1;
+                SOUNDS.forEach(sound => {
+                    const gainNode = this.audioContext.createGain();
+                    gainNode.connect(this.masterGain);
+                    gainNode.gain.value = 0;
+                    this.gainNodes.set(sound.id, gainNode);
+                });
+            }
+
+            async loadSound(id) {
+                if (this.sounds.has(id)) return;
+                this.init();
+                updateSoundState(id, 'loading', true);
+                updateDownloadStatus(id, 'DL...');
+                try {
+                    let response = await fetch(`sounds/${id}.m4a`);
+                    if (!response.ok) response = await fetch(`sounds/${id}.flac`);
+                    if (!response.ok) response = await fetch(`sounds/${id}.wav`);
+                    if (!response.ok) throw new Error('File not found');
+                    
+                    const arrayBuffer = await response.arrayBuffer();
+                    const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+                    this.sounds.set(id, audioBuffer);
+                    updateDownloadStatus(id, 'Ready');
+                    updateSoundState(id, 'loading', false);
+                } catch (error) {
+                    updateDownloadStatus(id, 'Failed');
+                    updateSoundState(id, 'loading', false);
+                }
+            }
+
+            playSound(id) {
+                this.init();
+                if (!this.sounds.has(id)) {
+                    this.loadSound(id).then(() => this.playSound(id));
+                    return;
+                }
+                if (this.isPlaying(id)) return;
+                
+                const audioBuffer = this.sounds.get(id);
+                const source = this.audioContext.createBufferSource();
+                source.buffer = audioBuffer;
+                source.loop = true;
+                const gainNode = this.gainNodes.get(id);
+                source.connect(gainNode);
+                const volume = Math.min(100, Math.max(0, state.volumes[id] || 70)) / 100;
+                gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(Math.max(0.01, volume), this.audioContext.currentTime + 2);
+                source.start(0);
+                this.sounds.set(`${id}_source`, source);
+                updateMediaSession();
+            }
+
+            stopSound(id, fadeOut = false) {
+                const source = this.sounds.get(`${id}_source`);
+                if (!source) return;
+                if (fadeOut) {
+                    const gainNode = this.gainNodes.get(id);
+                    gainNode.gain.setValueAtTime(gainNode.gain.value, this.audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 2);
+                    setTimeout(() => {
+                        source.stop();
+                        this.sounds.delete(`${id}_source`);
+                    }, 2000);
+                } else {
+                    source.stop();
+                    this.sounds.delete(`${id}_source`);
+                }
+            }
+
+            toggleSound(id) {
+                if (this.isPlaying(id)) {
+                    this.stopSound(id);
+                    updateSoundState(id, 'playing', false);
+                } else {
+                    this.playSound(id);
+                    updateSoundState(id, 'playing', true);
+                }
+            }
+
+            stopAllImmediate() {
+                SOUNDS.forEach(sound => {
+                    if (this.isPlaying(sound.id)) {
+                        this.stopSound(sound.id, false);
+                        updateSoundState(sound.id, 'playing', false);
+                    }
+                });
+            }
+
+            applyFadeToAll(targetVolume) {
+                SOUNDS.forEach(sound => {
+                    if (this.isPlaying(sound.id)) {
+                        const gainNode = this.gainNodes.get(sound.id);
+                        if (gainNode) {
+                            gainNode.gain.setValueAtTime(Math.max(0.01, targetVolume / 100), this.audioContext.currentTime + 1);
+                        }
+                    }
+                });
+            }
+
+            restoreVolumes() {
+                state.activeSounds.forEach(id => {
+                    const targetVol = originalVolumes[id] !== undefined ? originalVolumes[id] : (state.volumes[id] || 70);
+                    this.setVolume(id, targetVol);
+                });
+            }
+
+            isPlaying(id) {
+                return this.sounds.has(`${id}_source`);
+            }
+
+            setVolume(id, volume) {
+                const gainNode = this.gainNodes.get(id);
+                if (gainNode) {
+                    const clamped = Math.min(100, Math.max(0, volume));
+                    gainNode.gain.setValueAtTime(clamped / 100, this.audioContext.currentTime);
+                }
+            }
+
+            startTimer(minutes) {
+                this.stopTimer();
+                if (minutes <= 0) return;
+                
+                timerActive = true;
+                timerMinutes = minutes;
+                timerRemainingSeconds = minutes * 60;
+                
+                state.activeSounds.forEach(id => {
+                    originalVolumes[id] = state.volumes[id] || 70;
+                });
+                
+                this.updateTimerDisplay();
+                timerInterval = setInterval(() => {
+                    if (timerRemainingSeconds > 0) {
+                        timerRemainingSeconds--;
+                        this.updateTimerDisplay();
+                        
+                        if (timerRemainingSeconds <= 900 && timerRemainingSeconds > 0) {
+                            const fadeProgress = timerRemainingSeconds / 900;
+                            this.applyFadeToAll(fadeProgress * 100);
+                        }
+                        
+                        if (timerRemainingSeconds === 0) {
+                            this.stopTimer();
+                            this.stopAllImmediate();
+                        }
+                    }
+                }, 1000);
+                this.updateTimerDisplay();
+                updateToggleState(true);
+            }
+
+            stopTimer() {
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                }
+                timerActive = false;
+                timerMinutes = 0;
+                timerRemainingSeconds = 0;
+                this.updateTimerDisplay();
+                updateToggleState(false);
+            }
+
+            updateTimerDisplay() {
+                const timerTextEl = document.getElementById('toggleTimerText');
+                if (!timerTextEl) return;
+                
+                if (!timerActive || timerRemainingSeconds <= 0) {
+                    timerTextEl.textContent = '00:00';
+                } else {
+                    const hours = Math.floor(timerRemainingSeconds / 3600);
+                    const minutes = Math.floor((timerRemainingSeconds % 3600) / 60);
+                    const seconds = timerRemainingSeconds % 60;
+                    if (hours > 0) {
+                        timerTextEl.textContent = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    } else {
+                        timerTextEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    }
+                }
+            }
+
+            getTimerMinutes() {
+                return timerActive ? Math.ceil(timerRemainingSeconds / 60) : 0;
+            }
+        }
+
+        const audioManager = new AudioManager();
+
+        function updateToggleState(isActive) {
+            const toggleSwitch = document.getElementById('toggleSwitch');
+            if (isActive) {
+                toggleSwitch.classList.add('active');
+            } else {
+                toggleSwitch.classList.remove('active');
+            }
+        }
+
+        function initToggleSwitch() {
+            const toggleSwitch = document.getElementById('toggleSwitch');
+            const modal = document.getElementById('timePickerModal');
+            const confirmBtn = document.getElementById('confirmTimer');
+            const cancelBtn = document.getElementById('cancelTimer');
+            const modalHours = document.getElementById('modalHours');
+            const modalMinutes = document.getElementById('modalMinutes');
+            
+            let tempHours = 0, tempMinutes = 0;
+            
+            const hoursOptions = document.getElementById('hoursNumberOptions');
+            for (let i = 0; i <= 12; i++) {
+                const option = document.createElement('div');
+                option.className = 'number-option';
+                option.textContent = i;
+                option.addEventListener('click', () => {
+                    tempHours = i;
+                    modalHours.textContent = i;
+                    hoursOptions.classList.remove('show');
+                });
+                hoursOptions.appendChild(option);
+            }
+            
+            const minutesOptions = document.getElementById('minutesNumberOptions');
+            for (let i = 0; i < 60; i += 5) {
+                const option = document.createElement('div');
+                option.className = 'number-option';
+                option.textContent = i.toString().padStart(2, '0');
+                option.addEventListener('click', () => {
+                    tempMinutes = i;
+                    modalMinutes.textContent = i.toString().padStart(2, '0');
+                    minutesOptions.classList.remove('show');
+                });
+                minutesOptions.appendChild(option);
+            }
+            
+            modalHours.addEventListener('click', (e) => {
+                e.stopPropagation();
+                hoursOptions.classList.toggle('show');
+                minutesOptions.classList.remove('show');
+            });
+            
+            modalMinutes.addEventListener('click', (e) => {
+                e.stopPropagation();
+                minutesOptions.classList.toggle('show');
+                hoursOptions.classList.remove('show');
+            });
+            
+            document.addEventListener('click', () => {
+                hoursOptions.classList.remove('show');
+                minutesOptions.classList.remove('show');
+            });
+            
+            toggleSwitch.addEventListener('click', () => {
+                if (!timerActive) {
+                    tempHours = 0;
+                    tempMinutes = 0;
+                    modalHours.textContent = '0';
+                    modalMinutes.textContent = '00';
+                    modal.classList.add('active');
+                } else {
+                    audioManager.stopTimer();
+                    audioManager.restoreVolumes();
+                }
+            });
+            
+            confirmBtn.addEventListener('click', () => {
+                const totalMinutes = tempHours * 60 + tempMinutes;
+                if (totalMinutes > 0) {
+                    audioManager.startTimer(totalMinutes);
+                } else {
+                    audioManager.stopTimer();
+                }
+                modal.classList.remove('active');
+            });
+            
+            cancelBtn.addEventListener('click', () => {
+                modal.classList.remove('active');
+            });
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.classList.remove('active');
+            });
+        }
+
+        async function fetchSoundsFromGitHub() {
+            const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`GitHub API error: ${response.status}`);
+            const files = await response.json();
+            if (!Array.isArray(files)) throw new Error('Invalid response');
+            
+            return files
+                .filter(file => file.name.match(/\.(flac|mp3|wav|ogg)$/i))
+                .map(file => {
+                    const id = file.name.replace(/\.(flac|mp3|wav|ogg)$/i, '');
+                    const name = id.split(/[-_]/).map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+                    let icon = 'ambient';
+                    const lowerId = id.toLowerCase();
+                    if (lowerId.includes('fan')) icon = 'fan';
+                    else if (lowerId.includes('rain')) icon = 'rain';
+                    else if (lowerId.includes('ocean') || lowerId.includes('wave')) icon = 'ocean';
+                    else if (lowerId.includes('forest') || lowerId.includes('woods')) icon = 'forest';
+                    else if (lowerId.includes('fire')) icon = 'fireplace';
+                    else if (lowerId.includes('binaural')) icon = 'binaural';
+                    return { id, name, icon };
+                });
+        }
+
+        async function refreshSounds() {
+            const btn = document.getElementById('refreshSoundsBtn');
+            const list = document.getElementById('downloadsList');
+            btn.classList.add('loading');
+            list.innerHTML = '<div class="empty-message">Loading sounds...</div>';
+            
+            try {
+                const sounds = await fetchSoundsFromGitHub();
+                if (sounds.length === 0) {
+                    list.innerHTML = '<div class="empty-message">No sound files found</div>';
+                } else {
+                    SOUNDS = sounds;
+                    renderDownloads();
+                    state.activeSounds = state.activeSounds.filter(id => SOUNDS.some(s => s.id === id));
+                    saveActiveSounds();
+                    renderActiveSounds();
+                }
+            } catch (error) {
+                list.innerHTML = `<div class="empty-message">Error: ${error.message}</div>`;
+            } finally {
+                btn.classList.remove('loading');
+            }
+        }
+
+        function renderActiveSounds() {
+            const container = document.getElementById('soundsList');
+            if (!container) return;
+            
+            if (state.activeSounds.length === 0) {
+                container.innerHTML = '<div class="empty-message">No sounds added. Go to Downloads tab to add sounds.</div>';
+                return;
+            }
+
+            container.innerHTML = state.activeSounds.map(id => {
+                const sound = SOUNDS.find(s => s.id === id);
+                if (!sound) return '';
+                const isPlaying = state.playing[id] || false;
+                const volume = Math.min(100, Math.max(0, state.volumes[id] || 70));
+                return `
+                    <div class="sound-card ${isPlaying ? 'playing' : ''}" data-sound-id="${id}">
+                        <div class="sound-left">
+                            <div class="sound-icon" data-sound="${id}">
+                                <svg viewBox="0 0 60 60">${ICONS[sound.icon] || ICONS.default}</svg>
+                            </div>
+                            <span class="sound-name">${sound.name}</span>
+                        </div>
+                        <div class="volume-control">
+                            <input type="range" class="volume-slider" min="0" max="100" value="${volume}" data-sound="${id}">
+                            <span class="volume-label">${volume}%</span>
+                        </div>
+                        <div class="sound-actions">
+                            <button class="play-button" data-sound="${id}">${isPlaying ? '⏸' : '▶'}</button>
+                            <button class="remove-sound-btn" data-sound="${id}">✕</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            attachSoundCardListeners();
+            updateSoundCount();
+        }
+
+        function renderDownloads() {
+            const container = document.getElementById('downloadsList');
+            if (!container) return;
+            
+            if (SOUNDS.length === 0) {
+                container.innerHTML = '<div class="empty-message">No sounds available. Click refresh to load.</div>';
+                return;
+            }
+
+            container.innerHTML = SOUNDS.map(sound => {
+                const isAdded = state.activeSounds.includes(sound.id);
+                return `
+                    <div class="download-card">
+                        <div class="download-icon">
+                            <svg viewBox="0 0 60 60">${ICONS[sound.icon] || ICONS.default}</svg>
+                        </div>
+                        <div class="download-info">
+                            <span class="download-name">${sound.name}</span>
+                            <span class="download-status" id="download-status-${sound.id}">Ready</span>
+                        </div>
+                        <div class="download-actions">
+                            <button class="btn" data-sound="${sound.id}" onclick="audioManager.loadSound('${sound.id}'); this.disabled=true; this.textContent='DL...';">Download</button>
+                            <button class="btn btn-secondary ${isAdded ? 'active' : ''}" data-action="add-sound" data-sound="${sound.id}">${isAdded ? '✓' : 'Add'}</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            attachDownloadListeners();
+        }
+
+        function renderMixes() {
+            const container = document.getElementById('mixesList');
+            if (!container) return;
+            const presets = loadPresets();
+            
+            if (presets.every(p => p === null)) {
+                container.innerHTML = '<div class="empty-message">No saved mixes</div>';
+                return;
+            }
+
+            container.innerHTML = presets.map((preset, idx) => {
+                if (!preset) return '';
+                const soundCount = Object.keys(preset.sounds).length;
+                const timerText = preset.timer > 0 ? `${preset.timer}min` : '0min';
+                return `
+                    <div class="mix-card">
+                        <div class="mix-icon">♫</div>
+                        <div class="mix-content">
+                            <span class="mix-name">${preset.name}</span>
+                            <span class="mix-timer-badge">${soundCount} sounds · ${timerText}</span>
+                        </div>
+                        <div class="mix-actions">
+                            <button class="mix-btn play" onclick="loadMix(${idx})">▶</button>
+                            <button class="mix-btn delete" onclick="deleteMix(${idx})">✕</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function initializeState() {
+            SOUNDS.forEach(sound => {
+                if (state.volumes[sound.id] === undefined) state.volumes[sound.id] = 70;
+                if (state.playing[sound.id] === undefined) state.playing[sound.id] = false;
+                if (state.loading[sound.id] === undefined) state.loading[sound.id] = false;
+            });
+            loadActiveSounds();
+            loadVolumes();
+        }
+
+        function loadActiveSounds() {
+            const saved = localStorage.getItem('vibey_active_sounds');
+            if (saved) {
+                try {
+                    state.activeSounds = JSON.parse(saved).filter(id => SOUNDS.some(s => s.id === id));
+                } catch (e) { state.activeSounds = []; }
+            } else {
+                state.activeSounds = [];
+                saveActiveSounds();
+            }
+            updateSoundCount();
+        }
+
+        function saveActiveSounds() {
+            localStorage.setItem('vibey_active_sounds', JSON.stringify(state.activeSounds));
+            updateSoundCount();
+        }
+
+        function updateSoundCount() {
+            const el = document.getElementById('soundCount');
+            if (el) el.textContent = state.activeSounds.length;
+        }
+
+        function loadVolumes() {
+            const saved = localStorage.getItem('vibey_volumes');
+            if (saved) {
+                try { Object.assign(state.volumes, JSON.parse(saved)); } catch (e) {}
+            }
+        }
+
+        function saveVolumes() {
+            localStorage.setItem('vibey_volumes', JSON.stringify(state.volumes));
+        }
+
+        function updateSoundState(id, field, value) {
+            state[field][id] = value;
+            const card = document.querySelector(`[data-sound-id="${id}"]`);
+            if (!card) return;
+            if (field === 'playing') {
+                if (value) {
+                    card.classList.add('playing');
+                    const btn = card.querySelector('.play-button');
+                    if (btn) btn.textContent = '⏸';
+                } else {
+                    card.classList.remove('playing');
+                    const btn = card.querySelector('.play-button');
+                    if (btn) btn.textContent = '▶';
+                }
+            }
+        }
+
+        function updateDownloadStatus(id, status) {
+            const el = document.getElementById(`download-status-${id}`);
+            if (el) el.textContent = status;
+        }
+
+        function attachSoundCardListeners() {
+            document.querySelectorAll('.sound-icon').forEach(el => {
+                el.addEventListener('click', () => audioManager.toggleSound(el.dataset.sound));
+            });
+            document.querySelectorAll('.volume-slider').forEach(slider => {
+                slider.addEventListener('input', (e) => {
+                    const id = e.target.dataset.sound;
+                    let volume = parseInt(e.target.value);
+                    volume = Math.min(100, Math.max(0, volume));
+                    state.volumes[id] = volume;
+                    saveVolumes();
+                    audioManager.setVolume(id, volume);
+                    e.target.parentElement.querySelector('.volume-label').textContent = `${volume}%`;
+                });
+            });
+            document.querySelectorAll('.play-button').forEach(btn => {
+                btn.addEventListener('click', () => audioManager.toggleSound(btn.dataset.sound));
+            });
+            document.querySelectorAll('.remove-sound-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = btn.dataset.sound;
+                    state.activeSounds = state.activeSounds.filter(s => s !== id);
+                    saveActiveSounds();
+                    renderActiveSounds();
+                    renderDownloads();
+                });
+            });
+        }
+
+        function attachDownloadListeners() {
+            document.querySelectorAll('[data-action="add-sound"]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = btn.dataset.sound;
+                    if (state.activeSounds.includes(id)) {
+                        state.activeSounds = state.activeSounds.filter(s => s !== id);
+                    } else {
+                        state.activeSounds.push(id);
+                    }
+                    saveActiveSounds();
+                    renderActiveSounds();
+                    renderDownloads();
+                });
+            });
+        }
+
+        function attachTabListeners() {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabName = tab.dataset.tab;
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(`${tabName}Tab`).classList.add('active');
+                });
+            });
+        }
+
+        function loadPresets() {
+            const saved = localStorage.getItem('vibey_presets');
+            if (!saved) return [null, null, null];
+            try { return JSON.parse(saved); } catch { return [null, null, null]; }
+        }
+
+        function savePresets(presets) {
+            localStorage.setItem('vibey_presets', JSON.stringify(presets));
+            renderMixes();
+        }
+
+        function getCurrentMix() {
+            const currentVolumes = {};
+            state.activeSounds.forEach(id => {
+                if (state.volumes[id] > 0) currentVolumes[id] = state.volumes[id];
+            });
+            return { sounds: currentVolumes, timer: audioManager.getTimerMinutes(), name: 'My Mix' };
+        }
+
+        window.saveCurrentMix = function() {
+            const presets = loadPresets();
+            const emptySlot = presets.findIndex(p => !p);
+            if (emptySlot === -1) {
+                alert('Maximum 3 mixes. Delete one first.');
+                return;
+            }
+            const name = prompt('Mix name:', `Mix ${emptySlot + 1}`);
+            if (!name) return;
+            const mix = getCurrentMix();
+            mix.name = name;
+            presets[emptySlot] = mix;
+            savePresets(presets);
+        };
+
+        window.loadMix = function(index) {
+            const presets = loadPresets();
+            const preset = presets[index];
+            if (!preset) return;
+            
+            audioManager.stopAllImmediate();
+            Object.keys(state.playing).forEach(id => state.playing[id] = false);
+            state.activeSounds = [];
+            
+            Object.entries(preset.sounds).forEach(([id, vol]) => {
+                if (SOUNDS.some(s => s.id === id) && vol > 0) {
+                    state.activeSounds.push(id);
+                    state.volumes[id] = vol;
+                    audioManager.setVolume(id, vol);
+                    audioManager.playSound(id);
+                    updateSoundState(id, 'playing', true);
+                }
+            });
+            
+            saveActiveSounds();
+            saveVolumes();
+            if (preset.timer > 0) audioManager.startTimer(preset.timer);
+            renderActiveSounds();
+        };
+
+        window.deleteMix = function(index) {
+            if (!confirm('Delete mix?')) return;
+            const presets = loadPresets();
+            presets[index] = null;
+            savePresets(presets);
+        };
+
+        function initCollapsible() {
+            document.getElementById('mixesHeader').addEventListener('click', () => {
+                document.getElementById('mixesHeader').classList.toggle('collapsed');
+                document.getElementById('mixesContent').classList.toggle('collapsed');
+            });
+            document.getElementById('soundsHeader').addEventListener('click', () => {
+                document.getElementById('soundsHeader').classList.toggle('collapsed');
+                document.getElementById('soundsContent').classList.toggle('collapsed');
+            });
+        }
+
+        function updateMediaSession() {
+            if (!navigator.mediaSession) return;
+            const playingSounds = state.activeSounds.filter(id => state.playing[id]).map(id => SOUNDS.find(s => s.id === id)?.name);
+            navigator.mediaSession.metadata = new MediaMetadata({ 
+                title: playingSounds.length ? playingSounds.join(' + ') : 'Vibey' 
+            });
+        }
+
+        function initInstallHandler() {
+            const installFooterBtn = document.getElementById('installFooterBtn');
+            if (installFooterBtn) {
+                installFooterBtn.addEventListener('click', async () => {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        if (outcome === 'accepted') {
+                            console.log('User accepted the install prompt');
+                        }
+                        deferredPrompt = null;
+                    } else {
+                        alert('Install prompt not available. You may already have the app installed or your browser does not support PWA installation.');
+                    }
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                SOUNDS = await fetchSoundsFromGitHub();
+            } catch (e) {
+                console.warn('Failed to load sounds from GitHub');
+                SOUNDS = [];
+            }
+            initializeState();
+            renderActiveSounds();
+            renderDownloads();
+            renderMixes();
+            attachTabListeners();
+            initCollapsible();
+            initToggleSwitch();
+            initInstallHandler();
+        });
+
+        document.getElementById('refreshSoundsBtn').addEventListener('click', refreshSounds);
+        document.getElementById('stopBtn').addEventListener('click', () => {
+            audioManager.stopAllImmediate();
+            Object.keys(state.playing).forEach(id => updateSoundState(id, 'playing', false));
+            audioManager.stopTimer();
+            audioManager.restoreVolumes();
+        });
+        document.getElementById('saveBtn').addEventListener('click', window.saveCurrentMix);
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const installFooterBtn = document.getElementById('installFooterBtn');
+            if (installFooterBtn) {
+                installFooterBtn.style.display = 'inline-flex';
+            }
+        });
+        
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            const installFooterBtn = document.getElementById('installFooterBtn');
+            if (installFooterBtn) {
+                installFooterBtn.style.display = 'none';
+            }
+        }
+
+        document.addEventListener('click', () => {
+            if (audioManager.audioContext?.state === 'suspended') {
+                audioManager.audioContext.resume();
+            }
+        });
+    </script>
+</body>
+</html>
