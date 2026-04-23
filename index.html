@@ -164,6 +164,46 @@
             color: white;
         }
 
+        .update-banner {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: rgba(30, 10, 10, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 80, 80, 0.2);
+            border-radius: 40px;
+            font-size: 13px;
+            color: var(--text-primary);
+            box-shadow: var(--shadow-md);
+            white-space: nowrap;
+        }
+
+        .update-banner.show {
+            display: flex;
+        }
+
+        .update-banner .update-btn {
+            background: var(--accent);
+            border: none;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .update-banner .update-btn:hover {
+            background: var(--accent-hover);
+        }
+
         header, .tab-nav, .tab-container, .bottom-bar {
             position: relative;
             z-index: 2;
@@ -956,6 +996,11 @@
         </div>
     </div>
 
+    <div class="update-banner" id="updateBanner">
+        <span>A new version of Vibey is available!</span>
+        <button class="update-btn" id="updateBtn">Update</button>
+    </div>
+
     <div class="modal-overlay" id="timePickerModal">
         <div class="time-picker-modal">
             <h3>Set Timer</h3>
@@ -1721,8 +1766,29 @@
 
             if ('serviceWorker' in navigator) {
                 try {
-                    await navigator.serviceWorker.register('sw.js');
+                    const registration = await navigator.serviceWorker.register('sw.js');
                     console.log('Service Worker registered');
+
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                const updateBanner = document.getElementById('updateBanner');
+                                const updateBtn = document.getElementById('updateBtn');
+                                updateBanner.classList.add('show');
+                                updateBtn.addEventListener('click', () => {
+                                    newWorker.postMessage({ action: 'skipWaiting' });
+                                });
+                            }
+                        });
+                    });
+
+                    let refreshing = false;
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        if (refreshing) return;
+                        refreshing = true;
+                        window.location.reload();
+                    });
                 } catch (e) {
                     console.warn('Service Worker registration failed:', e);
                 }
