@@ -46,6 +46,7 @@
             height: 100vh;
             font-weight: 400;
             letter-spacing: -0.01em;
+            padding-top: env(safe-area-inset-top, 0px);
         }
 
         body::before {
@@ -1742,7 +1743,7 @@
                         }
                         deferredPrompt = null;
                     } else {
-                        alert('To install Vibey:\n\n• Chrome/Edge: Click "Install" in the address bar\n• Safari: Share menu → "Add to Home Screen"\n• Firefox: Not supported for installation\n\nTip: Serve the app via a local server (e.g., "npx serve") for the best install experience.');
+                        alert('To install Vibey:\n\n• Chrome/Edge: Click "Install" in the address bar\n• Safari: Share menu → "Add to Home Screen"\n   (Auto-add isn\'t possible — browsers require manual action for security)\n• Firefox (Android): Menu → "Install"\n• Firefox (Desktop): Not supported for PWA installation\n\nTip: Serve the app via a local server (e.g., "npx serve") for the best install experience.');
                     }
                 });
             }
