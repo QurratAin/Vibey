@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="Vibey - Ambient sound mixer for focus, sleep, and everything in between">
     <meta name="theme-color" content="#1c1c1e">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -45,7 +45,7 @@
             height: 100vh;
             font-weight: 400;
             letter-spacing: -0.01em;
-            padding-top: env(safe-area-inset-top, 8px);
+            padding-top: calc(8px + env(safe-area-inset-top, 0px));
         }
 
         body::before {
