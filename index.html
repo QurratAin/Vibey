@@ -9,6 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Vibey">
     <title>Vibey</title>
+    <meta name="version" content="1.0.1">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='35' fill='%23b91c1c'/></svg>">
     <style>
@@ -19,14 +20,12 @@
         }
 
         :root {
-            --bg-primary: #080000;
             --surface-glass: rgba(30, 10, 10, 0.4);
             --text-primary: #ffffff;
             --text-secondary: #b0b0b8;
             --text-muted: #8a6e6e;
             --accent: #b91c1c;
             --accent-hover: #991b1b;
-            --border-light: rgba(255, 80, 80, 0.1);
             --shadow-sm: 0 8px 24px rgba(0, 0, 0, 0.6);
             --shadow-md: 0 20px 40px rgba(0, 0, 0, 0.7);
             --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -46,7 +45,7 @@
             height: 100vh;
             font-weight: 400;
             letter-spacing: -0.01em;
-            padding-top: env(safe-area-inset-top, 0px);
+            padding-top: env(safe-area-inset-top, 8px);
         }
 
         body::before {
@@ -1724,6 +1723,23 @@
             });
         }
 
+        function checkForAppUpdate() {
+            const versionMeta = document.querySelector('meta[name="version"]');
+            if (!versionMeta) return;
+            const currentVersion = versionMeta.getAttribute('content');
+            const lastVersion = localStorage.getItem('vibey_version');
+            if (lastVersion && lastVersion !== currentVersion) {
+                const updateBanner = document.getElementById('updateBanner');
+                const updateBtn = document.getElementById('updateBtn');
+                updateBanner.classList.add('show');
+                updateBtn.addEventListener('click', () => {
+                    localStorage.setItem('vibey_version', currentVersion);
+                    window.location.reload();
+                });
+            }
+            localStorage.setItem('vibey_version', currentVersion);
+        }
+
         function initInstallHandler() {
             const installBanner = document.getElementById('installBanner');
             const installBannerClose = document.getElementById('installBannerClose');
@@ -1764,6 +1780,7 @@
             initCollapsible();
             initToggleSwitch();
             initInstallHandler();
+            checkForAppUpdate();
 
             if ('serviceWorker' in navigator) {
                 try {
