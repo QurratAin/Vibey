@@ -1559,6 +1559,13 @@
             if (saved) {
                 try { state.downloaded = JSON.parse(saved); } catch (e) { state.downloaded = []; }
             }
+            // Any sound that's in activeSounds is already downloaded
+            state.activeSounds.forEach(id => {
+                if (!state.downloaded.includes(id)) {
+                    state.downloaded.push(id);
+                }
+            });
+            saveDownloaded();
         }
 
         function saveDownloaded() {
