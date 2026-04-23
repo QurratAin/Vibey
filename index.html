@@ -1053,11 +1053,10 @@
                 }
             }
 
-            playSound(id) {
+            async playSound(id) {
                 this.init();
                 if (!this.sounds.has(id)) {
-                    this.loadSound(id).then(() => this.playSound(id));
-                    return;
+                    await this.loadSound(id);
                 }
                 if (this.isPlaying(id)) return;
                 
@@ -1092,12 +1091,12 @@
                 }
             }
 
-            toggleSound(id) {
+            async toggleSound(id) {
                 if (this.isPlaying(id)) {
                     this.stopSound(id);
                     updateSoundState(id, 'playing', false);
                 } else {
-                    this.playSound(id);
+                    await this.playSound(id);
                     updateSoundState(id, 'playing', true);
                 }
             }
@@ -1401,7 +1400,16 @@
             }
 
             container.innerHTML = SOUNDS.map(sound => {
+                const isDownloaded = audioManager.sounds.has(sound.id);
                 const isAdded = state.activeSounds.includes(sound.id);
+                let buttonHtml = '';
+                if (!isDownloaded) {
+                    buttonHtml = `<button class="btn" data-action="download-sound" data-sound="${sound.id}">Download</button>`;
+                } else if (!isAdded) {
+                    buttonHtml = `<button class="btn btn-secondary" data-action="add-sound" data-sound="${sound.id}">Add</button>`;
+                } else {
+                    buttonHtml = `<button class="btn btn-secondary active" disabled>✓</button>`;
+                }
                 return `
                     <div class="download-card">
                         <div class="download-icon">
@@ -1409,11 +1417,10 @@
                         </div>
                         <div class="download-info">
                             <span class="download-name">${sound.name}</span>
-                            <span class="download-status" id="download-status-${sound.id}">Ready</span>
+                            <span class="download-status" id="download-status-${sound.id}">${isDownloaded ? 'Ready' : 'Not downloaded'}</span>
                         </div>
                         <div class="download-actions">
-                            <button class="btn" data-sound="${sound.id}" onclick="audioManager.loadSound('${sound.id}'); this.disabled=true; this.textContent='DL...';">Download</button>
-                            <button class="btn btn-secondary ${isAdded ? 'active' : ''}" data-action="add-sound" data-sound="${sound.id}">${isAdded ? '✓' : 'Add'}</button>
+                            ${buttonHtml}
                         </div>
                     </div>
                 `;
@@ -1539,6 +1546,8 @@
             document.querySelectorAll('.remove-sound-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const id = btn.dataset.sound;
+                    audioManager.stopSound(id, false);
+                    updateSoundState(id, 'playing', false);
                     state.activeSounds = state.activeSounds.filter(s => s !== id);
                     saveActiveSounds();
                     renderActiveSounds();
@@ -1548,6 +1557,15 @@
         }
 
         function attachDownloadListeners() {
+            document.querySelectorAll('[data-action="download-sound"]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.dataset.sound;
+                    btn.disabled = true;
+                    btn.textContent = 'DL...';
+                    await audioManager.loadSound(id);
+                    renderDownloads();
+                });
+            });
             document.querySelectorAll('[data-action="add-sound"]').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const id = btn.dataset.sound;
@@ -1609,7 +1627,7 @@
             savePresets(presets);
         };
 
-        window.loadMix = function(index) {
+        window.loadMix = async function(index) {
             const presets = loadPresets();
             const preset = presets[index];
             if (!preset) return;
@@ -1618,15 +1636,15 @@
             Object.keys(state.playing).forEach(id => state.playing[id] = false);
             state.activeSounds = [];
             
-            Object.entries(preset.sounds).forEach(([id, vol]) => {
+            for (const [id, vol] of Object.entries(preset.sounds)) {
                 if (SOUNDS.some(s => s.id === id) && vol > 0) {
                     state.activeSounds.push(id);
                     state.volumes[id] = vol;
                     audioManager.setVolume(id, vol);
-                    audioManager.playSound(id);
+                    await audioManager.playSound(id);
                     updateSoundState(id, 'playing', true);
                 }
-            });
+            }
             
             saveActiveSounds();
             saveVolumes();
@@ -1714,7 +1732,6 @@
         document.getElementById('refreshSoundsBtn').addEventListener('click', refreshSounds);
         document.getElementById('stopBtn').addEventListener('click', () => {
             audioManager.stopAllImmediate();
-            Object.keys(state.playing).forEach(id => updateSoundState(id, 'playing', false));
             audioManager.stopTimer();
             audioManager.restoreVolumes();
         });
