@@ -1,0 +1,21 @@
+{
+  "name": "Vibey",
+  "short_name": "Vibey",
+  "description": "Soundscapes for every moment",
+  "start_url": "/Vibey/index.html",
+  "display": "standalone",
+  "background_color": "#080000",
+  "theme_color": "#1c1c1e",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='35' fill='%23b91c1c'/></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='35' fill='%23b91c1c'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
