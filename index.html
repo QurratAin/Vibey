@@ -1040,7 +1040,8 @@
             volumes: {},
             playing: {},
             loading: {},
-            activeSounds: []
+            activeSounds: [],
+            downloaded: []
         };
 
         let deferredPrompt = null;
@@ -1090,6 +1091,10 @@
                     const arrayBuffer = await response.arrayBuffer();
                     const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
                     this.sounds.set(id, audioBuffer);
+                    if (!state.downloaded.includes(id)) {
+                        state.downloaded.push(id);
+                        saveDownloaded();
+                    }
                     updateDownloadStatus(id, 'Ready');
                     updateSoundState(id, 'loading', false);
                 } catch (error) {
@@ -1445,7 +1450,7 @@
             }
 
             container.innerHTML = SOUNDS.map(sound => {
-                const isDownloaded = audioManager.sounds.has(sound.id);
+                const isDownloaded = state.downloaded.includes(sound.id);
                 const isAdded = state.activeSounds.includes(sound.id);
                 let buttonHtml = '';
                 if (!isDownloaded) {
@@ -1512,6 +1517,7 @@
             });
             loadActiveSounds();
             loadVolumes();
+            loadDownloaded();
         }
 
         function loadActiveSounds() {
@@ -1546,6 +1552,17 @@
 
         function saveVolumes() {
             localStorage.setItem('vibey_volumes', JSON.stringify(state.volumes));
+        }
+
+        function loadDownloaded() {
+            const saved = localStorage.getItem('vibey_downloaded');
+            if (saved) {
+                try { state.downloaded = JSON.parse(saved); } catch (e) { state.downloaded = []; }
+            }
+        }
+
+        function saveDownloaded() {
+            localStorage.setItem('vibey_downloaded', JSON.stringify(state.downloaded));
         }
 
         function updateSoundState(id, field, value) {
@@ -1732,9 +1749,20 @@
                 const updateBanner = document.getElementById('updateBanner');
                 const updateBtn = document.getElementById('updateBtn');
                 updateBanner.classList.add('show');
-                updateBtn.addEventListener('click', () => {
+                updateBtn.addEventListener('click', async () => {
                     localStorage.setItem('vibey_version', currentVersion);
-                    window.location.reload();
+                    // Clear all service worker caches to force fresh content
+                    if ('caches' in window) {
+                        const keys = await caches.keys();
+                        await Promise.all(keys.map(key => caches.delete(key)));
+                    }
+                    // Unregister any existing service workers
+                    if ('serviceWorker' in navigator) {
+                        const registrations = await navigator.serviceWorker.getRegistrations();
+                        await Promise.all(registrations.map(r => r.unregister()));
+                    }
+                    // Force reload with cache busting
+                    window.location.href = window.location.href.split('?')[0] + '?v=' + currentVersion;
                 });
             }
             localStorage.setItem('vibey_version', currentVersion);
