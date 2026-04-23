@@ -85,6 +85,57 @@
             100% { transform: scale(1.2) rotate(-2deg); opacity: 0.6; }
         }
 
+        .install-banner {
+            position: relative;
+            z-index: 3;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(185, 28, 28, 0.15);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 80, 80, 0.15);
+            font-size: 12px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: background 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .install-banner:hover {
+            background: rgba(185, 28, 28, 0.25);
+        }
+
+        .install-banner svg {
+            width: 14px;
+            height: 14px;
+            fill: var(--accent);
+            flex-shrink: 0;
+        }
+
+        .install-banner .install-banner-close {
+            margin-left: 12px;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255, 80, 80, 0.15);
+            border: none;
+            color: var(--text-secondary);
+            font-size: 11px;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.15s ease;
+        }
+
+        .install-banner .install-banner-close:hover {
+            background: rgba(255, 69, 58, 0.4);
+            color: white;
+        }
+
         header, .tab-nav, .tab-container, .bottom-bar, footer {
             position: relative;
             z-index: 2;
@@ -760,24 +811,6 @@
             color: var(--accent);
         }
 
-        .install-link {
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .install-link svg {
-            width: 12px;
-            height: 12px;
-            fill: currentColor;
-        }
-
-        .footer-separator {
-            color: #5e5e64;
-            font-size: 10px;
-        }
-
         .empty-message {
             text-align: center;
             color: var(--text-secondary);
@@ -843,6 +876,14 @@
     </style>
 </head>
 <body>
+    <div class="install-banner" id="installBanner">
+        <svg viewBox="0 0 24 24">
+            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+        </svg>
+        <span>Install Vibey for the best experience</span>
+        <button class="install-banner-close" id="installBannerClose" title="Dismiss">✕</button>
+    </div>
+
     <header>
         <div class="header-left">
             <h1>Vibey</h1>
@@ -941,13 +982,6 @@
 
     <footer>
         <span>This app is free, but my therapy isn't. <a href="https://paypal.me/qurratulain006" target="_blank" rel="noopener noreferrer" class="donate-link">Help!</a></span>
-        <span class="footer-separator">|</span>
-        <span class="install-link" id="installFooterBtn">
-            <svg viewBox="0 0 24 24" width="12" height="12">
-                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-            </svg>
-            Install App
-        </span>
     </footer>
 
     <script>
@@ -1629,18 +1663,23 @@
         }
 
         function initInstallHandler() {
-            const installFooterBtn = document.getElementById('installFooterBtn');
-            if (installFooterBtn) {
-                installFooterBtn.addEventListener('click', async () => {
+            const installBanner = document.getElementById('installBanner');
+            const installBannerClose = document.getElementById('installBannerClose');
+            
+            if (installBanner) {
+                installBanner.addEventListener('click', async (e) => {
+                    if (e.target === installBannerClose) {
+                        installBanner.style.display = 'none';
+                        return;
+                    }
                     if (deferredPrompt) {
                         deferredPrompt.prompt();
                         const { outcome } = await deferredPrompt.userChoice;
                         if (outcome === 'accepted') {
                             console.log('User accepted the install prompt');
+                            installBanner.style.display = 'none';
                         }
                         deferredPrompt = null;
-                    } else {
-                        alert('Install prompt not available. You may already have the app installed or your browser does not support PWA installation.');
                     }
                 });
             }
@@ -1675,16 +1714,16 @@
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            const installFooterBtn = document.getElementById('installFooterBtn');
-            if (installFooterBtn) {
-                installFooterBtn.style.display = 'inline-flex';
+            const installBanner = document.getElementById('installBanner');
+            if (installBanner) {
+                installBanner.style.display = 'flex';
             }
         });
         
         if (window.matchMedia('(display-mode: standalone)').matches) {
-            const installFooterBtn = document.getElementById('installFooterBtn');
-            if (installFooterBtn) {
-                installFooterBtn.style.display = 'none';
+            const installBanner = document.getElementById('installBanner');
+            if (installBanner) {
+                installBanner.style.display = 'none';
             }
         }
 
