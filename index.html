@@ -1117,16 +1117,14 @@
                 this.sounds = new Map();
                 this.gainNodes = new Map();
                 this.masterGain = null;
+                this._resumeHandler = this._handleResume.bind(this);
+                this._iosAudioEl = null;
             }
 
             init() {
                 if (this.audioContext) return;
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                this.audioContext.addEventListener('statechange', () => {
-                    if (this.audioContext.state === 'suspended') {
-                        this.audioContext.resume();
-                    }
-                });
+                this.audioContext.addEventListener('statechange', this._resumeHandler);
                 this.masterGain = this.audioContext.createGain();
                 this.masterGain.connect(this.audioContext.destination);
                 this.masterGain.gain.value = 1;
@@ -1138,41 +1136,127 @@
                 });
             }
 
+            _handleResume() {
+                if (this.audioContext.state === 'suspended' || this.audioContext.state === 'interrupted') {
+                    this.audioContext.resume().then(() => {
+                        if (this._hasAnyPlaying()) {
+                            this._restartSilentTrack();
+                        }
+                    }).catch(() => {});
+                }
+            }
+
+            _hasAnyPlaying() {
+                return state.activeSounds.some(id => this.isPlaying(id));
+            }
+
             ensureAudioContext() {
-                if (this.audioContext && this.audioContext.state === 'suspended') {
-                    this.audioContext.resume();
+                if (this.audioContext && (this.audioContext.state === 'suspended' || this.audioContext.state === 'interrupted')) {
+                    this.audioContext.resume().then(() => {
+                        if (this._hasAnyPlaying()) {
+                            this._restartSilentTrack();
+                        }
+                    }).catch(() => {});
+                }
+            }
+
+            _restartSilentTrack() {
+                this.stopSilentTrack();
+                setTimeout(() => this.startSilentTrack(), 100);
+            }
+
+            // iOS: Use a hidden <audio> element to keep the audio session alive
+            // This is more reliable than Web Audio API silent tracks for iOS background playback
+            _ensureIOSAudioElement() {
+                if (this._iosAudioEl) return;
+                try {
+                    this._iosAudioEl = document.createElement('audio');
+                    this._iosAudioEl.setAttribute('playsinline', '');
+                    this._iosAudioEl.setAttribute('webkit-playsinline', '');
+                    this._iosAudioEl.loop = true;
+                    this._iosAudioEl.volume = 0.01;
+                    // Create a silent WAV blob
+                    const sampleRate = 8000;
+                    const numSamples = sampleRate;
+                    const buffer = new ArrayBuffer(44 + numSamples * 2);
+                    const view = new DataView(buffer);
+                    // WAV header
+                    const writeStr = (offset, str) => {
+                        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+                    };
+                    writeStr(0, 'RIFF');
+                    view.setUint32(4, 36 + numSamples * 2, true);
+                    writeStr(8, 'WAVE');
+                    writeStr(12, 'fmt ');
+                    view.setUint32(16, 16, true);
+                    view.setUint16(20, 1, true);
+                    view.setUint16(22, 1, true);
+                    view.setUint32(24, sampleRate, true);
+                    view.setUint32(28, sampleRate * 2, true);
+                    view.setUint16(32, 2, true);
+                    view.setUint16(34, 16, true);
+                    writeStr(36, 'data');
+                    view.setUint32(40, numSamples * 2, true);
+                    // Fill with silence (zeros)
+                    for (let i = 0; i < numSamples; i++) {
+                        view.setInt16(44 + i * 2, 0, true);
+                    }
+                    const blob = new Blob([buffer], { type: 'audio/wav' });
+                    const url = URL.createObjectURL(blob);
+                    this._iosAudioEl.src = url;
+                    this._iosAudioEl.load();
+                } catch (e) {
+                    this._iosAudioEl = null;
                 }
             }
 
             startSilentTrack() {
-                if (this.silentSource) return;
-                if (!this.audioContext) return;
-                const sampleRate = this.audioContext.sampleRate;
-                const buffer = this.audioContext.createBuffer(1, Math.max(1, Math.floor(sampleRate * 0.1)), sampleRate);
-                const channelData = buffer.getChannelData(0);
-                channelData.fill(0);
+                // Start the Web Audio API silent track
+                if (!this.silentSource && this.audioContext) {
+                    try {
+                        const sampleRate = this.audioContext.sampleRate;
+                        const buffer = this.audioContext.createBuffer(1, Math.max(1, Math.floor(sampleRate * 0.5)), sampleRate);
+                        const channelData = buffer.getChannelData(0);
+                        channelData.fill(0);
+                        
+                        this.silentSource = this.audioContext.createBufferSource();
+                        this.silentSource.buffer = buffer;
+                        this.silentSource.loop = true;
+                        
+                        this.silentGain = this.audioContext.createGain();
+                        this.silentGain.gain.value = 0.01;
+                        
+                        this.silentSource.connect(this.silentGain);
+                        this.silentGain.connect(this.audioContext.destination);
+                        this.silentSource.start();
+                    } catch (e) {}
+                }
                 
-                this.silentSource = this.audioContext.createBufferSource();
-                this.silentSource.buffer = buffer;
-                this.silentSource.loop = true;
-                
-                this.silentGain = this.audioContext.createGain();
-                this.silentGain.gain.value = 0.001;
-                
-                this.silentSource.connect(this.silentGain);
-                this.silentGain.connect(this.audioContext.destination);
-                this.silentSource.start();
+                // Also start the iOS <audio> element for reliable background playback
+                this._ensureIOSAudioElement();
+                if (this._iosAudioEl) {
+                    try {
+                        this._iosAudioEl.play().catch(() => {});
+                    } catch (e) {}
+                }
             }
 
             stopSilentTrack() {
                 if (this.silentSource) {
                     try { this.silentSource.stop(); } catch (e) {}
-                    this.silentSource.disconnect();
+                    try { this.silentSource.disconnect(); } catch (e) {}
                     this.silentSource = null;
                 }
                 if (this.silentGain) {
-                    this.silentGain.disconnect();
+                    try { this.silentGain.disconnect(); } catch (e) {}
                     this.silentGain = null;
+                }
+                // Stop the iOS audio element
+                if (this._iosAudioEl) {
+                    try {
+                        this._iosAudioEl.pause();
+                        this._iosAudioEl.currentTime = 0;
+                    } catch (e) {}
                 }
             }
 
@@ -2025,6 +2109,23 @@
                 });
             }
         }, true);
+
+        // iOS: Handle touch events to keep audio alive
+        document.addEventListener('touchstart', () => {
+            if (audioManager.audioContext?.state === 'suspended') {
+                audioManager.audioContext.resume();
+            }
+        }, { once: false });
+
+        // iOS: Resume audio when app comes to foreground from background
+        document.addEventListener('focus', () => {
+            audioManager.ensureAudioContext();
+        });
+
+        // iOS: Handle pageshow for when navigating back to the page
+        window.addEventListener('pageshow', () => {
+            audioManager.ensureAudioContext();
+        });
     </script>
 </body>
 </html>
