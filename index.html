@@ -583,7 +583,7 @@
             background: rgba(20, 8, 8, 0.6);
             backdrop-filter: blur(30px);
             border-radius: 50px;
-            padding: 6px 16px;
+            padding: 16px 16px;
             border: 1px solid rgba(255, 80, 80, 0.15);
             box-shadow: var(--shadow-sm);
             display: inline-flex;
@@ -1066,6 +1066,11 @@
             init() {
                 if (this.audioContext) return;
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                this.audioContext.addEventListener('statechange', () => {
+                    if (this.audioContext.state === 'suspended') {
+                        this.audioContext.resume();
+                    }
+                });
                 this.masterGain = this.audioContext.createGain();
                 this.masterGain.connect(this.audioContext.destination);
                 this.masterGain.gain.value = 1;
@@ -1075,6 +1080,44 @@
                     gainNode.gain.value = 0;
                     this.gainNodes.set(sound.id, gainNode);
                 });
+            }
+
+            ensureAudioContext() {
+                if (this.audioContext && this.audioContext.state === 'suspended') {
+                    this.audioContext.resume();
+                }
+            }
+
+            startSilentTrack() {
+                if (this.silentSource) return;
+                if (!this.audioContext) return;
+                const sampleRate = this.audioContext.sampleRate;
+                const buffer = this.audioContext.createBuffer(1, Math.max(1, Math.floor(sampleRate * 0.1)), sampleRate);
+                const channelData = buffer.getChannelData(0);
+                channelData.fill(0);
+                
+                this.silentSource = this.audioContext.createBufferSource();
+                this.silentSource.buffer = buffer;
+                this.silentSource.loop = true;
+                
+                this.silentGain = this.audioContext.createGain();
+                this.silentGain.gain.value = 0.001;
+                
+                this.silentSource.connect(this.silentGain);
+                this.silentGain.connect(this.audioContext.destination);
+                this.silentSource.start();
+            }
+
+            stopSilentTrack() {
+                if (this.silentSource) {
+                    try { this.silentSource.stop(); } catch (e) {}
+                    this.silentSource.disconnect();
+                    this.silentSource = null;
+                }
+                if (this.silentGain) {
+                    this.silentGain.disconnect();
+                    this.silentGain = null;
+                }
             }
 
             async loadSound(id) {
@@ -1121,6 +1164,7 @@
                 gainNode.gain.exponentialRampToValueAtTime(Math.max(0.01, volume), this.audioContext.currentTime + 2);
                 source.start(0);
                 this.sounds.set(`${id}_source`, source);
+                this.startSilentTrack();
                 updateMediaSession();
             }
 
@@ -1158,6 +1202,10 @@
                         updateSoundState(sound.id, 'playing', false);
                     }
                 });
+                const anyPlaying = SOUNDS.some(s => this.isPlaying(s.id));
+                if (!anyPlaying) {
+                    this.stopSilentTrack();
+                }
             }
 
             applyFadeToAll(targetVolume) {
@@ -1747,6 +1795,26 @@
             });
         }
 
+        function initMediaSession() {
+            if (!navigator.mediaSession) return;
+            
+            navigator.mediaSession.setActionHandler('play', () => {
+                audioManager.ensureAudioContext();
+            });
+            
+            navigator.mediaSession.setActionHandler('pause', () => {
+                audioManager.stopAllImmediate();
+            });
+            
+            navigator.mediaSession.setActionHandler('previoustrack', () => {
+                // Required for iOS to show lock screen controls
+            });
+            
+            navigator.mediaSession.setActionHandler('nexttrack', () => {
+                // Required for iOS to show lock screen controls
+            });
+        }
+
         function checkForAppUpdate() {
             const versionMeta = document.querySelector('meta[name="version"]');
             if (!versionMeta) return;
@@ -1816,6 +1884,7 @@
             initToggleSwitch();
             initInstallHandler();
             checkForAppUpdate();
+            initMediaSession();
 
             if ('serviceWorker' in navigator) {
                 try {
@@ -1872,11 +1941,34 @@
             }
         }
 
-        document.addEventListener('click', () => {
-            if (audioManager.audioContext?.state === 'suspended') {
-                audioManager.audioContext.resume();
+        // Visibility change handlers to resume AudioContext when returning to the app
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                audioManager.ensureAudioContext();
             }
         });
+
+        document.addEventListener('webkitvisibilitychange', () => {
+            if (document.webkitVisibilityState === 'visible') {
+                audioManager.ensureAudioContext();
+            }
+        });
+
+        window.addEventListener('pagehide', () => {
+            // iOS may suspend AudioContext; we'll resume on return via visibilitychange
+        });
+
+        // Improved click handler: resume AudioContext and restart silent track if needed
+        document.addEventListener('click', () => {
+            if (audioManager.audioContext?.state === 'suspended') {
+                audioManager.audioContext.resume().then(() => {
+                    const anyPlaying = state.activeSounds.some(id => state.playing[id]);
+                    if (anyPlaying) {
+                        audioManager.startSilentTrack();
+                    }
+                });
+            }
+        }, true);
     </script>
 </body>
 </html>
